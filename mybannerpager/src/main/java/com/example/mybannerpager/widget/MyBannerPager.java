@@ -26,7 +26,6 @@ import java.util.List;
 public class MyBannerPager extends RelativeLayout implements View.OnClickListener {
     private Context mContext;//全局上下文对象
     private Button mButton;//全局按钮
-    private TextView tv_page;
     private ViewPager vp_banner;//全局ViewPager
     private ArrayList<ImageView> mViewList = new ArrayList<>();//图像视图列表存储多个ImageView
     private Handler mHandler = new Handler(Looper.myLooper());//声明一个处理器对象，用来实现自动翻页
@@ -51,7 +50,6 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
         //获取控件
         vp_banner = view.findViewById(R.id.vp_banner);
         mButton = view.findViewById(R.id.btn_try_free);
-        tv_page = view.findViewById(R.id.tv_page);
         addView(view);
 
         // 设置自定义Scroller以调整翻页速度
@@ -63,6 +61,21 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
+        //添加翻页监听
+        vp_banner.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                if (state == ViewPager.SCROLL_STATE_DRAGGING) {
+                    // 手动滑动触发
+                    int current = vp_banner.getCurrentItem();
+                    if(current>=mViewList.size()-1){
+                        vp_banner.setCurrentItem(1,false);
+                    } else if (current==0) {
+                        vp_banner.setCurrentItem(mViewList.size()-2,false);
+                    }
+                }
+            }
+        });
     }
 
 
@@ -87,7 +100,6 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
         vp_banner.setAdapter(new ImageAdapter());
         //默认显示第一张图片
         vp_banner.setCurrentItem(1);
-        tv_page.setText("当前页数："+vp_banner.getCurrentItem());
     }
 
     public void setOnclickListener(ButtonClickListener listener) {
@@ -138,27 +150,22 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
         @Override
         public void run() {
             int current = vp_banner.getCurrentItem();
-            int next = current + 1;
-            vp_banner.setCurrentItem(next, true);
-            tv_page.setText("当前页数："+vp_banner.getCurrentItem());
-            //当next达到条件时需要间隔
-            if (next >= mViewList.size() - 1) {
-//                try {
-//                    Thread.sleep(3000);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-                //到了末尾，跳转到第一张图片
+            if(current >= mViewList.size()-1){
+                //当前显示的图片到了末尾，跳转到第一张图片
                 vp_banner.setCurrentItem(1, false);
-                tv_page.setText("当前页数："+vp_banner.getCurrentItem());
-            } else if (next == 0) {
-                //到了头部
+                //立即换页
+                mHandler.post(this);
+            } else if (current == 0) {
+                //当前显示到了头部
                 vp_banner.setCurrentItem(mViewList.size() - 2, false);
-                tv_page.setText("当前页数："+vp_banner.getCurrentItem());
+                //立即换页
+                mHandler.post(this);
+            }else{
+                int next = current + 1;
+                vp_banner.setCurrentItem(next, true);
+                //延迟指定间隔后重复执行该方法
+                mHandler.postDelayed(this, mInterval);
             }
-            //延迟指定间隔后重复执行该方法
-            mHandler.postDelayed(this, mInterval);
-
         }
     };
 
