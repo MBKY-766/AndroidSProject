@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndroidSProject"
 include(":app")
- 
+include(":mybannerpager")
