@@ -1,17 +1,18 @@
 package com.example.mybannerpager.widget;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Scroller;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
@@ -29,9 +30,10 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
     private ViewPager vp_banner;//全局ViewPager
     private ArrayList<ImageView> mViewList = new ArrayList<>();//图像视图列表存储多个ImageView
     private Handler mHandler = new Handler(Looper.myLooper());//声明一个处理器对象，用来实现自动翻页
-    private Integer mInterval = 3000;//默认轮播时间间隔,单位毫秒
+    private Integer mInterval = 2000;//默认轮播时间间隔,单位毫秒
     private int mScrollDuration = 1000;//默认滚动时间间隔,单位毫秒，值越小速度越快
-
+    private boolean blockSwipe = false;   // 是否拦截本次滑动
+    //todo:手指按下暂停轮播
     public MyBannerPager(Context context) {
         this(context, null);
     }
@@ -44,6 +46,7 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
 
     //todo:1.轮播切换回第一张图片时不回滚 2.按钮不遮挡图片
     //初始化视图
+    @SuppressLint("ClickableViewAccessibility")
     private void initView() {
         //加载布局文件
         View view = LayoutInflater.from(mContext).inflate(R.layout.my_banner_pager, null);
@@ -66,14 +69,45 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
             @Override
             public void onPageScrollStateChanged(int state) {
                 if (state == ViewPager.SCROLL_STATE_DRAGGING) {
-                    // 手动滑动触发
                     int current = vp_banner.getCurrentItem();
-                    if(current>=mViewList.size()-1){
-                        vp_banner.setCurrentItem(1,false);
-                    } else if (current==0) {
-                        vp_banner.setCurrentItem(mViewList.size()-2,false);
+                    // 边界检测：准备拦截
+                    blockSwipe = (current == 0 || current >= mViewList.size() - 1);
+                    if (blockSwipe) {
+                        // 瞬移到安全区并禁止继续滑动
+                        if (current == 0) {
+                            vp_banner.setCurrentItem(mViewList.size() - 2, false);
+                        } else {
+                            vp_banner.setCurrentItem(1, false);
+                        }
                     }
+                } else {
+                    blockSwipe = false;   // 非拖拽状态恢复
                 }
+            }
+        });
+        // 按下暂停、松开恢复
+        vp_banner.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        stop();   // 手指按下，暂停
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // 手指松开时，根据位置判断是否需要拦截
+                        int current = vp_banner.getCurrentItem();
+                        if (current == 0) {
+                            // 左滑到最左，拦截
+                            blockSwipe = true;
+                        } else if (current == mViewList.size() - 2) {
+                            // 右滑到最右，拦截
+                            blockSwipe = true;
+                        }
+                        start();  // 手指离开，继续
+                        break;
+                }
+                return blockSwipe || false;// 事件继续传递给 ViewPager
             }
         });
     }
