@@ -31,10 +31,8 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
     private ArrayList<ImageView> mViewList = new ArrayList<>();//图像视图列表存储多个ImageView
     private Handler mHandler = new Handler(Looper.myLooper());//声明一个处理器对象，用来实现自动翻页
     private Integer mInterval = 3000;//默认轮播时间间隔,单位毫秒
-    private int mScrollDuration = 1000;//默认滚动时间间隔,单位毫秒，值越小速度越快
-    private boolean blockSwipe = false;   // 是否拦截本次滑动
+    private int mScrollDuration = 1500;//默认滚动时间间隔,单位毫秒，值越小速度越快
 
-    //todo:手指按下暂停轮播
     public MyBannerPager(Context context) {
         this(context, null);
     }
@@ -78,8 +76,6 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        //边界暂停 ->切换停止 ->无法继续滑动
-                        //todo:边界暂停->切换在翻页完成后立即触发，
                         stop();
                         break;
                     case MotionEvent.ACTION_MOVE:

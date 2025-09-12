@@ -1,0 +1,10 @@
+翻页小项目(基于自定义控件BannerPager):
+	a.自动轮播(Handler中的postDelayed())，可手动翻页
+	b.连续翻页，首尾相接（边界处切换资源位置）
+	b.边界异常滑动处理(添加触摸滑动监听MotionEvent.Action_MOVE)
+	c.可控滑动速度和时间间隔（通过反射暴力获取并更改Handler中的成员变量）
+	d.按下暂停(onTouch监听)
+
+  bug                                                   solution
+边界回滚                                           首尾各添加一个元素进行跳转
+快速滑动到边界时有瞬时跳转到画面                       添加触摸滑动监听MotionEvent.Action_MOVE
