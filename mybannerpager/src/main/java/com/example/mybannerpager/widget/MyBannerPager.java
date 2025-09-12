@@ -30,9 +30,10 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
     private ViewPager vp_banner;//全局ViewPager
     private ArrayList<ImageView> mViewList = new ArrayList<>();//图像视图列表存储多个ImageView
     private Handler mHandler = new Handler(Looper.myLooper());//声明一个处理器对象，用来实现自动翻页
-    private Integer mInterval = 2000;//默认轮播时间间隔,单位毫秒
+    private Integer mInterval = 3000;//默认轮播时间间隔,单位毫秒
     private int mScrollDuration = 1000;//默认滚动时间间隔,单位毫秒，值越小速度越快
     private boolean blockSwipe = false;   // 是否拦截本次滑动
+
     //todo:手指按下暂停轮播
     public MyBannerPager(Context context) {
         this(context, null);
@@ -65,49 +66,34 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
             e.printStackTrace();
         }
         //添加翻页监听
-        vp_banner.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){
-            @Override
-            public void onPageScrollStateChanged(int state) {
-                if (state == ViewPager.SCROLL_STATE_DRAGGING) {
-                    int current = vp_banner.getCurrentItem();
-                    // 边界检测：准备拦截
-                    blockSwipe = (current == 0 || current >= mViewList.size() - 1);
-                    if (blockSwipe) {
-                        // 瞬移到安全区并禁止继续滑动
-                        if (current == 0) {
-                            vp_banner.setCurrentItem(mViewList.size() - 2, false);
-                        } else {
-                            vp_banner.setCurrentItem(1, false);
-                        }
-                    }
-                } else {
-                    blockSwipe = false;   // 非拖拽状态恢复
-                }
-            }
-        });
+//        vp_banner.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+//            @Override
+//            public void onPageSelected(int position) {
+//                blockSwipe = (position == 0 || position == mViewList.size() - 2);
+//            }
+//        });
         // 按下暂停、松开恢复
         vp_banner.setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        stop();   // 手指按下，暂停
+                        //边界暂停 ->切换停止 ->无法继续滑动
+                        //todo:边界暂停->切换在翻页完成后立即触发，
+                        stop();
                         break;
+                    case MotionEvent.ACTION_MOVE:
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        // 手指松开时，根据位置判断是否需要拦截
-                        int current = vp_banner.getCurrentItem();
-                        if (current == 0) {
-                            // 左滑到最左，拦截
-                            blockSwipe = true;
-                        } else if (current == mViewList.size() - 2) {
-                            // 右滑到最右，拦截
-                            blockSwipe = true;
-                        }
                         start();  // 手指离开，继续
+                        int current = vp_banner.getCurrentItem();
+                        //到了边界，松开后立即切换
+                        if (current >= mViewList.size() - 1 || current == 0) {
+                            mHandler.post(mScroll);
+                        }
                         break;
                 }
-                return blockSwipe || false;// 事件继续传递给 ViewPager
+                return false;// 点击事件是否继续传递给 ViewPager true：不传递被拦截 false：传递
             }
         });
     }
@@ -184,20 +170,23 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
         @Override
         public void run() {
             int current = vp_banner.getCurrentItem();
-            if(current >= mViewList.size()-1){
+            if (current >= mViewList.size() - 1) {
                 //当前显示的图片到了末尾，跳转到第一张图片
                 vp_banner.setCurrentItem(1, false);
                 //立即换页
+                stop();
                 mHandler.post(this);
             } else if (current == 0) {
                 //当前显示到了头部
                 vp_banner.setCurrentItem(mViewList.size() - 2, false);
                 //立即换页
+                stop();
                 mHandler.post(this);
-            }else{
+            } else {
                 int next = current + 1;
                 vp_banner.setCurrentItem(next, true);
                 //延迟指定间隔后重复执行该方法
+                stop();
                 mHandler.postDelayed(this, mInterval);
             }
         }
@@ -205,6 +194,8 @@ public class MyBannerPager extends RelativeLayout implements View.OnClickListene
 
     public void start() {
         //启动轮播
+        // 保证单例：先取消旧任务，再启动新任务
+        mHandler.removeCallbacks(mScroll);
         mHandler.postDelayed(mScroll, mInterval);
     }
 
